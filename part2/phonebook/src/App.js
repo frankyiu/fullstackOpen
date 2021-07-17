@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
-
+import React, { useState, useEffect} from 'react'
+import personsService from './services/persons'
+import './index.css'
 
 const Filter = (props) =>{
   return (
@@ -19,33 +20,43 @@ const PersonForm = (props) =>{
 }
 
 const Persons =(props) =>{
-  const personToShow = props.personToShow
+  const {personToShow,deleteOne} = props
   return (
     <div>
-    {personToShow.map(person => <div key={person.name}>{person.name} {person.number}</div>)}
+      {personToShow.map(person => 
+        <div key={person.name}>{person.name} {person.number}  
+          <button onClick={()=>{deleteOne(person)}}>delete</button>
+        </div>)}
     </div>
   )
 }
-
+const Notification = ({ message }) => {
+  if (message === null) {
+    return null
+  }
+  return (
+    <div className="noti">
+      {message}
+    </div>
+  )
+}
+const ErrorNotification = ({ message }) => {
+  if (message === null) {
+    return null
+  }
+  return (
+    <div className="error">
+      {message}
+    </div>
+  )
+}
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas', number: '040-123456' },
-    { name: 'Ada Lovelace', number: '39-44-5323523' },
-    { name: 'Dan Abramov', number: '12-43-234345' },
-    { name: 'Mary Poppendieck', number: '39-23-6423122' }
-  ])
+  const [persons, setPersons] = useState([])
   const [newName, setNewName ] = useState('')
   const [phone, setPhone ] = useState('')
-  const [personToShow, setPersonToShow] = useState([...persons])
-
-  const addName = (event) =>{
-    event.preventDefault()
-    if (persons.find(person => person.name === newName)){
-      alert(`${newName} is already added to phonebook`)
-    }else{
-      setPersons([...persons, {name: newName, number: phone}])
-    }
-  }
+  const [nameToSearch, setNameToSearch] = useState('')
+  const [notiMessage, setNotiMessage] = useState(null)
+  const [errorMessage, setErrorMessage] = useState(null)
 
   const handleNameChange = (event) =>{
     setNewName(event.target.value)
@@ -56,19 +67,82 @@ const App = () => {
   }
 
   const searchName = (event) =>{
-    const nameToSearch = event.target.value.toLowerCase()
-    setPersonToShow(persons.filter(person=> person.name.toLowerCase().includes(nameToSearch)))
+    setNameToSearch(event.target.value.toLowerCase())
   }
 
+
+  const addName = (event) =>{
+    event.preventDefault()
+    const person = persons.find(person => person.name === newName)
+    const obj = {name:newName, number: phone}
+    if (person){
+      if(window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)){
+        personsService
+        .update(person.id, obj)
+        .then(data =>{
+           showNotiMessage(`Added ${newName}`)
+           updateUI()
+        })
+        .catch(error => {
+          showErrorMessage(`Information of ${newName} has already been removed from server`)
+          updateUI()
+        })
+      }
+    }else{
+      personsService
+        .create(obj)
+        .then(data =>{
+          showNotiMessage(`Added ${newName}`)
+          updateUI()
+        })
+    }
+  }
+
+  const deleteOne = (person) =>{
+      if(window.confirm(`Delete ${person.name} ?`)){
+        personsService
+        .deleteOne(person.id)
+        .then(data=>{
+          updateUI()
+        })
+      }
+  }
+
+  const updateUI = ()=>{
+    personsService
+    .getAll()
+    .then(data =>{
+      console.log(data)
+      setPersons(data)
+    })
+  }
+
+  const showNotiMessage = (message)=>{
+    setNotiMessage(message)
+    setTimeout(() => {setNotiMessage(null)}, 5000)
+  }
+
+  const showErrorMessage = (message)=>{
+    setErrorMessage(message)
+    setTimeout(() => {setErrorMessage(null)}, 5000)
+  }
+
+  useEffect(()=>{
+    updateUI()
+  }, [])
 
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={notiMessage}/>
+      <ErrorNotification message={errorMessage}/>
+
       <Filter searchName={searchName}/>
       <h3>add a new</h3>
       <PersonForm addName={addName} newName={newName} phone={phone} handleNameChange={handleNameChange} handlePhoneChnage={handlePhoneChnage}/>
       <h2>Numbers</h2>
-      <Persons personToShow={personToShow}/>
+      <Persons personToShow={persons.filter(person=> person.name.toLowerCase().includes(nameToSearch))}
+               deleteOne= {deleteOne}/>
     </div>
   )
 }
