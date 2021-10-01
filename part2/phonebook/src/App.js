@@ -84,7 +84,7 @@ const App = () => {
            updateUI()
         })
         .catch(error => {
-          showErrorMessage(`Information of ${newName} has already been removed from server`)
+          showErrorMessage(error.response.data.error)
           updateUI()
         })
       }
@@ -94,6 +94,10 @@ const App = () => {
         .then(data =>{
           showNotiMessage(`Added ${newName}`)
           updateUI()
+        })
+        .catch(error => {
+          showErrorMessage(error.response.data.error)
+          console.log(error.response.data)
         })
     }
   }
