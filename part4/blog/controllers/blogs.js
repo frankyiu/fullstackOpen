@@ -55,7 +55,7 @@ blogsRouter.delete('/:id', middleware.userExtractor, async(request, response,nex
 
 })
 
-blogsRouter.put('/:id', (request, response, next) => {
+blogsRouter.put('/:id', middleware.userExtractor,  async (request, response, next) => {
   const body = request.body
 
   const blog = {
